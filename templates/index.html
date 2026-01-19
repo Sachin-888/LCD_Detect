@@ -1,0 +1,364 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LCD Detection - YOLOv8</title>
+
+<style>
+    body {
+        background: #0f172a;
+        font-family: Arial, sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        color: white;
+    }
+
+    .card {
+        background: #020617;
+        padding: 20px;
+        border-radius: 16px;
+        box-shadow: 0 0 30px rgba(0,0,0,0.7);
+        text-align: center;
+        width: 420px;
+    }
+
+    h2 {
+        margin-bottom: 10px;
+    }
+
+    .camera-wrapper {
+        position: relative;
+        border: 4px solid red;
+        border-radius: 12px;
+        overflow: hidden;
+        transition: border 0.3s ease;
+    }
+
+    video {
+        width: 100%;
+        border-radius: 10px;
+    }
+
+    #status {
+        margin: 12px 0;
+        font-size: 18px;
+        font-weight: bold;
+    }
+
+    button {
+        width: 100%;
+        padding: 12px;
+        font-size: 16px;
+        border-radius: 10px;
+        border: none;
+        cursor: not-allowed;
+        background: #334155;
+        color: white;
+        transition: background 0.3s ease;
+    }
+
+    button.enabled {
+        background: #22c55e;
+        cursor: pointer;
+    }
+
+    button.enabled:hover {
+        background: #16a34a;
+    }
+</style>
+</head>
+
+<body>
+
+<div class="card">
+    <h2>📺 LCD Detection</h2>
+
+    <div id="frame" class="camera-wrapper">
+        <video id="video" autoplay playsinline></video>
+    </div>
+
+    <canvas id="canvas" hidden></canvas>
+
+    <div id="status">❌ No LCD</div>
+
+    <button id="captureBtn" disabled>Capture Image</button>
+</div>
+
+<script>
+const video = document.getElementById("video");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+const statusText = document.getElementById("status");
+const frame = document.getElementById("frame");
+const captureBtn = document.getElementById("captureBtn");
+
+let lcdDetected = false;
+
+// Open camera
+navigator.mediaDevices.getUserMedia({ video: true })
+    .then(stream => video.srcObject = stream)
+    .catch(() => alert("Camera permission denied"));
+
+// Detection loop
+setInterval(async () => {
+    if (video.videoWidth === 0) return;
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0);
+
+    const image = canvas.toDataURL("image/jpeg");
+
+    const res = await fetch("/detect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image })
+    });
+
+    const data = await res.json();
+    lcdDetected = data.lcd === 1 || data.lcd_detected === true;
+
+    if (lcdDetected) {
+        frame.style.borderColor = "lime";
+        statusText.innerText = "✅ LCD DETECTED";
+        captureBtn.disabled = false;
+        captureBtn.classList.add("enabled");
+    } else {
+        frame.style.borderColor = "red";
+        statusText.innerText = "❌ No LCD";
+        captureBtn.disabled = true;
+        captureBtn.classList.remove("enabled");
+    }
+}, 1200);
+
+// Capture image
+captureBtn.onclick = async () => {
+    const res = await fetch("/capture", { method: "POST" });
+    const data = await res.json();
+
+    if (data.success) {
+        alert("📸 Image saved:\n" + data.file);
+    } else {
+        alert("Capture failed");
+    }
+};
+</script>
+
+</body>
+</html> -->
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LCD Detection - YOLOv8</title>
+
+<style>
+    body {
+        background: #0f172a;
+        font-family: Arial, sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        color: white;
+        flex-direction: column;
+    }
+
+    .card {
+        background: #020617;
+        padding: 20px;
+        border-radius: 16px;
+        box-shadow: 0 0 30px rgba(0,0,0,0.7);
+        text-align: center;
+        width: 420px;
+        margin-bottom: 20px;
+    }
+
+    h2 {
+        margin-bottom: 10px;
+    }
+
+    .camera-wrapper {
+        position: relative;
+        border: 4px solid red;
+        border-radius: 12px;
+        overflow: hidden;
+        transition: border 0.3s ease;
+    }
+
+    video {
+        width: 100%;
+        border-radius: 10px;
+        transition: transform 0.3s ease; /* Smooth zoom */
+    }
+
+    #status {
+        margin: 12px 0;
+        font-size: 18px;
+        font-weight: bold;
+    }
+
+    button {
+        width: 100%;
+        padding: 12px;
+        font-size: 16px;
+        border-radius: 10px;
+        border: none;
+        cursor: not-allowed;
+        background: #334155;
+        color: white;
+        transition: background 0.3s ease;
+        margin-top: 10px;
+    }
+
+    button.enabled {
+        background: #22c55e;
+        cursor: pointer;
+    }
+
+    button.enabled:hover {
+        background: #16a34a;
+    }
+
+    #startCamera {
+        background: #3b82f6;
+        cursor: pointer;
+    }
+
+    #startCamera:hover {
+        background: #2563eb;
+    }
+
+    input[type="range"] {
+        width: 100%;
+        margin-top: 10px;
+    }
+    .roi-box {
+    position: absolute;
+    top: 40px;
+    left: 40px;
+    right: 40px;
+    bottom: 40px;
+    border: 2px dashed rgba(255, 255, 255, 0.6);
+    border-radius: 8px;
+    pointer-events: none;
+}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+    <h2>📺 LCD Detection</h2>
+
+    <div id="frame" class="camera-wrapper">
+        <video id="video" autoplay playsinline></video>
+        <div class="roi-box"></div>
+    </div>
+
+    <canvas id="canvas" hidden></canvas>
+
+    <div id="status">❌ No LCD</div>
+
+    <!-- <label for="zoomRange">🔍 Zoom:</label> -->
+    <!-- <input type="range" id="zoomRange" min="1" max="3" step="0.1" value="1"> -->
+
+    <button id="captureBtn" disabled>Capture Image</button>
+</div>
+
+<button id="startCamera">🎥 Start Camera</button>
+
+<script>
+const video = document.getElementById("video");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+const statusText = document.getElementById("status");
+const frame = document.getElementById("frame");
+const captureBtn = document.getElementById("captureBtn");
+const startCameraBtn = document.getElementById("startCamera");
+//const zoomRange = document.getElementById("zoomRange");
+
+let lcdDetected = false;
+let cameraStarted = false;
+
+// Start camera on button click (required for iOS)
+startCameraBtn.addEventListener("click", async () => {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+        cameraStarted = true;
+        startCameraBtn.style.display = "none"; // hide start button
+    } catch (err) {
+        alert("Camera error: " + err.message);
+    }
+});
+
+// Zoom effect
+//zoomRange.addEventListener("input", () => {
+//    const zoomValue = zoomRange.value;
+//    video.style.transform = `scale(${zoomValue})`;
+//});
+
+// Detection loop
+setInterval(async () => {
+    if (!cameraStarted || video.videoWidth === 0) return;
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0);
+
+    const image = canvas.toDataURL("image/jpeg");
+
+    try {
+        const res = await fetch("/detect", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ image })
+        });
+
+        const data = await res.json();
+        lcdDetected = data.lcd === 1 || data.lcd_detected === true;
+
+        if (lcdDetected) {
+            frame.style.borderColor = "lime";
+            statusText.innerText = "✅ LCD DETECTED";
+            captureBtn.disabled = false;
+            captureBtn.classList.add("enabled");
+        } else {
+            frame.style.borderColor = "red";
+            statusText.innerText = "❌ No LCD";
+            captureBtn.disabled = true;
+            captureBtn.classList.remove("enabled");
+        }
+    } catch (err) {
+        console.error("Detection error:", err);
+    }
+}, 1200);
+
+// Capture image
+captureBtn.addEventListener("click", async () => {
+    try {
+        const res = await fetch("/capture", { method: "POST" });
+        const data = await res.json();
+
+        if (data.success) {
+            alert("📸 Image saved:\n" + data.file);
+        } else {
+            alert("Capture failed");
+        }
+    } catch (err) {
+        alert("Capture error: " + err.message);
+    }
+});
+</script>
+
+</body>
+</html>
+
+
+
